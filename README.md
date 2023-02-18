@@ -2,13 +2,13 @@
 
 React hook for atomjs
 
-## Install
+## Installation
 
-```javascript
-
-npm install @m1st1ck/atomjs
-npm install @m1st1ck/atomjs-react
-
+```sh
+npm i @m1st1ck/atomjs @m1st1ck/atomjs-react
+```
+```sh
+yarn add @m1st1ck/atomjs @m1st1ck/atomjs-react
 ```
 
 ## useAtom\<T\>(atom: ObservableAtom<T>, shouldUpdate?: (prev: T, next: T) => boolean): T
