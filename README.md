@@ -1,4 +1,4 @@
-# AtomJS React
+# AtomJS React [![npm Version](https://img.shields.io/npm/v/@m1st1ck/atomjs-react.svg?style=flat-square)](https://www.npmjs.org/package/@m1st1ck/atomjs-react)
 
 React hook for atomjs
 
