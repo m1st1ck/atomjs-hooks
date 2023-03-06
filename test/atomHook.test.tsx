@@ -1,5 +1,4 @@
-import React from "react";
-import { fireEvent, render } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { asyncAtom } from "@m1st1ck/atomjs";
 import { useAtom } from "../src";
 
@@ -8,10 +7,25 @@ type UserAtom = {
   age: number | undefined;
 };
 
-const getUserState = () => ({
+const getUserState = (next: Partial<UserAtom> = {}) => ({
   name: undefined,
   age: undefined,
+  ...next,
 });
+
+function getAsyncState(
+  key: "init" | "loading" | "loaded" | "error",
+  errorMessage: string | undefined = undefined
+) {
+  return {
+    init: false,
+    loading: false,
+    loaded: false,
+    error: false,
+    errorMessage,
+    [key]: true,
+  };
+}
 
 let userAsyncAtom = asyncAtom<UserAtom>(getUserState());
 
@@ -21,91 +35,47 @@ describe("Atoms Hook", () => {
   });
 
   test("useAtom", () => {
-    const App = () => {
-      const [user, { loaded, loading, init }] = useAtom(userAsyncAtom);
+    const { result } = renderHook(() => useAtom(userAsyncAtom));
 
-      return (
-        <div>
-          {init && <div data-testid="state">init</div>}
-          {loading && <div data-testid="state">loading</div>}
-          {loaded && <div data-testid="state">loaded</div>}
-          <span data-testid="age-container">{user.age}</span>
-          <button
-            data-testid="age-button"
-            onClick={() => {
-              userAsyncAtom.setAsyncState({ loading: true }, { age: 21 });
-            }}
-          />
-          <button
-            data-testid="button"
-            onClick={() => {
-              userAsyncAtom.setAsyncState({ loaded: true }, { age: 22 });
-            }}
-          />
-        </div>
-      );
-    };
+    expect(result.current[1]).toMatchObject(getAsyncState("init"));
+    expect(result.current[0]).toMatchObject(getUserState());
 
-    const { getByTestId } = render(<App />);
+    act(() => {
+      userAsyncAtom.setAsyncState({ loading: true }, { age: 44 });
+      userAsyncAtom.setAsyncState({ loading: true }, { age: 21 });
+    });
 
-    expect(getByTestId("state")).toHaveTextContent("init");
-    expect(getByTestId("age-container")).not.toHaveTextContent("21");
-    expect(getByTestId("age-container")).not.toHaveTextContent("22");
+    expect(result.current[1]).toMatchObject(getAsyncState("loading"));
+    expect(result.current[0]).toMatchObject(getUserState({ age: 21 }));
 
-    fireEvent.click(getByTestId("age-button"));
+    act(() => {
+      userAsyncAtom.setAsyncState({ loaded: true }, { age: 22 });
+    });
 
-    expect(getByTestId("state")).toHaveTextContent("loading");
-    expect(getByTestId("age-container")).toHaveTextContent("21");
-
-    fireEvent.click(getByTestId("button"));
-
-    expect(getByTestId("state")).toHaveTextContent("loaded");
-    expect(getByTestId("age-container")).toHaveTextContent("22");
+    expect(result.current[1]).toMatchObject(getAsyncState("loaded"));
+    expect(result.current[0]).toMatchObject(getUserState({ age: 22 }));
   });
 
   test("useAtom partial", () => {
-    const App = () => {
-      const [user, { loaded, loading, init }] = useAtom(
-        userAsyncAtom,
-        (prev, next) => prev[1].loaded !== next[1].loaded
-      );
+    const { result } = renderHook(() =>
+      useAtom(userAsyncAtom, (prev, next) => prev[1].loaded !== next[1].loaded)
+    );
 
-      return (
-        <div>
-          {init && <div data-testid="state">init</div>}
-          {loading && <div data-testid="state">loading</div>}
-          {loaded && <div data-testid="state">loaded</div>}
-          <span data-testid="age-container">{user.age}</span>
-          <button
-            data-testid="age-button"
-            onClick={() => {
-              userAsyncAtom.setAsyncState({ loading: true }, { age: 21 });
-            }}
-          />
-          <button
-            data-testid="button"
-            onClick={() => {
-              userAsyncAtom.setAsyncState({ loaded: true }, { age: 22 });
-            }}
-          />
-        </div>
-      );
-    };
+    expect(result.current[1]).toMatchObject(getAsyncState("init"));
+    expect(result.current[0]).toMatchObject(getUserState());
 
-    const { getByTestId } = render(<App />);
+    act(() => {
+      userAsyncAtom.setAsyncState("loading", { age: 21 });
+    });
 
-    expect(getByTestId("state")).toHaveTextContent("init");
-    expect(getByTestId("age-container")).not.toHaveTextContent("21");
-    expect(getByTestId("age-container")).not.toHaveTextContent("22");
+    expect(result.current[1]).toMatchObject(getAsyncState("init"));
+    expect(result.current[0]).toMatchObject(getUserState());
 
-    fireEvent.click(getByTestId("age-button"));
+    act(() => {
+      userAsyncAtom.setAsyncState("loaded", { age: 21 });
+    });
 
-    expect(getByTestId("state")).toHaveTextContent("init");
-    expect(getByTestId("age-container")).not.toHaveTextContent("21");
-
-    fireEvent.click(getByTestId("button"));
-
-    expect(getByTestId("state")).toHaveTextContent("loaded");
-    expect(getByTestId("age-container")).toHaveTextContent("22");
+    expect(result.current[1]).toMatchObject(getAsyncState("loaded"));
+    expect(result.current[0]).toMatchObject(getUserState({ age: 21 }));
   });
 });
